@@ -174,20 +174,23 @@ void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time, Bone
     uint32_t jointCount = skeleton->GetJointCount();
     for (uint32_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
     {
-        if (mask.boneMasks[jointIndex] == 0.0f)
-        {
-            continue;
-        }
+//         if (mask.boneMasks[jointIndex] == 0.0f)
+//         {
+//             continue;
+//         }
         Matrix4x4* jointKeyframes = GetJointKeyframes(jointIndex);
         Matrix4x4& matrix0 = jointKeyframes[frame0];
         Matrix4x4& matrix1 = jointKeyframes[frame1];
 
         Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
+        Matrix4x4 initialPosition = skeleton->m_modelToBoneSpace[jointIndex];
+        Matrix4x4::MatrixInvert(&initialPosition);
+        Matrix4x4 finalModel = Matrix4x4::MatrixLerp(initialPosition, newModel, mask.boneMasks[jointIndex]);
 
         //Needs to set bone to model matrix
         //(Or set your matrix tree's world to this, and set
         //bone to model on Skelelton world's array
-        skeleton->m_boneToModelSpace[jointIndex] = newModel; //SetJointWorldTransform(jointIndex, newModel);
+        skeleton->m_boneToModelSpace[jointIndex] = finalModel; //SetJointWorldTransform(jointIndex, newModel);
     }
 }
 
@@ -221,6 +224,8 @@ void AnimationMotion::WriteToStream(IBinaryWriter& writer)
     writer.Write<float>(m_frameTime);
     writer.WriteString(m_motionName.c_str());
     writer.Write<int>(m_jointCount);
+    writer.Write<PLAYBACK_MODE>(m_playbackMode);
+    writer.Write<float>(m_lastTime);
 
     unsigned int numKeyframes = m_frameCount * m_jointCount;
     for (unsigned int index = 0; index < numKeyframes; ++index)
@@ -256,6 +261,8 @@ void AnimationMotion::ReadFromStream(IBinaryReader& reader)
     reader.ReadString(motionName, 64);
     m_motionName = std::string(motionName);
     ASSERT_OR_DIE(reader.Read<int>(m_jointCount), "Failed to read frame count");
+    ASSERT_OR_DIE(reader.Read<PLAYBACK_MODE>(m_playbackMode), "Failed to read playback mode");
+    ASSERT_OR_DIE(reader.Read<float>(m_lastTime), "Failed to read last time");
 
     unsigned int numKeyframes = m_frameCount * m_jointCount; 
     m_keyframes = new Matrix4x4[numKeyframes];

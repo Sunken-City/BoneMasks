@@ -291,7 +291,7 @@ void TheGame::Render() const
             mask.SetAllBonesTo(1.0f);
             for (int i = 0; i < 9; ++i)
             {
-                mask.boneMasks[i] = 0.0f;
+                mask.boneMasks[i] = 0.7f;
             }
             g_loadedMotion->ApplyMotionToSkeleton(g_loadedSkeleton, (float)GetCurrentTimeSeconds(), mask);
             if (g_loadedSkeleton->m_joints)

@@ -31,7 +31,7 @@ public:
     };
 
     //CONSTRUCTORS//////////////////////////////////////////////////////////////////////////
-    AnimationMotion() {};
+    AnimationMotion() : m_playbackMode(PAUSED) {};
     AnimationMotion(const std::string& motionName, float timeSpan, float framerate, Skeleton* skeleton);
     ~AnimationMotion();
 
