@@ -122,6 +122,74 @@ void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time)
     }
 }
 
+//-----------------------------------------------------------------------------------
+void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time, BoneMask& mask)
+{
+    uint32_t frame0 = 0;
+    uint32_t frame1 = 0;
+    float blend;
+
+    if (m_playbackMode == PLAYBACK_MODE::PAUSED)
+    {
+        time = m_lastTime;
+    }
+    else
+    {
+        m_lastTime = fmodf(time, m_totalLengthSeconds);
+    }
+
+    if (m_playbackMode == PLAYBACK_MODE::CLAMP)
+    {
+        time = fmodf(time, m_totalLengthSeconds);
+        if (time > m_totalLengthSeconds)
+        {
+            time = m_totalLengthSeconds;
+        }
+    }
+    else if (m_playbackMode == PLAYBACK_MODE::LOOP)
+    {
+        if (time > m_totalLengthSeconds)
+        {
+            time = fmodf(time, m_totalLengthSeconds);
+        }
+    }
+    else if (m_playbackMode == PLAYBACK_MODE::PING_PONG)
+    {
+        if (time > m_totalLengthSeconds)
+        {
+            float animTime = fmodf(time, m_totalLengthSeconds * 2.0f) - m_totalLengthSeconds;
+            if (animTime > 0.0f)
+            {
+                time = fmodf(time, m_totalLengthSeconds);
+            }
+            else if (animTime < 0.0f)
+            {
+                time = m_totalLengthSeconds - fmodf(time, m_totalLengthSeconds);
+            }
+        }
+    }
+
+    GetFrameIndicesWithBlend(frame0, frame1, blend, time);
+
+    uint32_t jointCount = skeleton->GetJointCount();
+    for (uint32_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
+    {
+        if (mask.boneMasks[jointIndex] == 0.0f)
+        {
+            continue;
+        }
+        Matrix4x4* jointKeyframes = GetJointKeyframes(jointIndex);
+        Matrix4x4& matrix0 = jointKeyframes[frame0];
+        Matrix4x4& matrix1 = jointKeyframes[frame1];
+
+        Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
+
+        //Needs to set bone to model matrix
+        //(Or set your matrix tree's world to this, and set
+        //bone to model on Skelelton world's array
+        skeleton->m_boneToModelSpace[jointIndex] = newModel; //SetJointWorldTransform(jointIndex, newModel);
+    }
+}
 
 //-----------------------------------------------------------------------------------
 void AnimationMotion::WriteToFile(const char* filename)
@@ -211,4 +279,20 @@ void AnimationMotion::ReadFromFile(const char* filename)
         ReadFromStream(reader);
     }
     reader.Close();
+}
+
+//-----------------------------------------------------------------------------------
+BoneMask::BoneMask(unsigned int numBones)
+{
+    //Initialize to an empty mask, everything is currently set to 0.0f (no bones are affected by motion).
+    boneMasks.resize(numBones);
+}
+
+//-----------------------------------------------------------------------------------
+void BoneMask::SetAllBonesTo(float boneWeight)
+{
+    for (float& maskWeight : boneMasks)
+    {
+        maskWeight = 1.0f;
+    }
 }

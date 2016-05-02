@@ -287,7 +287,13 @@ void TheGame::Render() const
     {
         if (g_loadedMotion)
         {
-            g_loadedMotion->ApplyMotionToSkeleton(g_loadedSkeleton, (float)GetCurrentTimeSeconds());
+            BoneMask mask = BoneMask(g_loadedSkeleton->GetJointCount());
+            mask.SetAllBonesTo(1.0f);
+            for (int i = 0; i < 9; ++i)
+            {
+                mask.boneMasks[i] = 0.0f;
+            }
+            g_loadedMotion->ApplyMotionToSkeleton(g_loadedSkeleton, (float)GetCurrentTimeSeconds(), mask);
             if (g_loadedSkeleton->m_joints)
             {
                 delete g_loadedSkeleton->m_joints->m_mesh;

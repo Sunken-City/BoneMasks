@@ -1,11 +1,22 @@
 #pragma once
 #include "Engine/Math/Matrix4x4.hpp"
 #include <string>
+#include <vector>
 
 class Skeleton;
 class IBinaryReader;
 class IBinaryWriter;
 
+//-----------------------------------------------------------------------------------
+struct BoneMask
+{
+    BoneMask(unsigned int numBones);
+    void SetAllBonesTo(float boneWeight);
+
+    std::vector<float> boneMasks;
+};
+
+//-----------------------------------------------------------------------------------
 class AnimationMotion
 {
 public:
@@ -19,16 +30,17 @@ public:
         NUM_PLAYBACK_MODES
     };
 
-	//CONSTRUCTORS//////////////////////////////////////////////////////////////////////////
+    //CONSTRUCTORS//////////////////////////////////////////////////////////////////////////
     AnimationMotion() {};
-	AnimationMotion(const std::string& motionName, float timeSpan, float framerate, Skeleton* skeleton);
-	~AnimationMotion();
+    AnimationMotion(const std::string& motionName, float timeSpan, float framerate, Skeleton* skeleton);
+    ~AnimationMotion();
 
-	//FUNCTIONS//////////////////////////////////////////////////////////////////////////
-	void GetFrameIndicesWithBlend(uint32_t& outFrameIndex0, uint32_t& outFrameIndex1, float& outBlend, float inTime);
-	Matrix4x4* GetJointKeyframes(uint32_t jointIndex);
-	void ApplyMotionToSkeleton(Skeleton* skeleton, float time);
-	
+    //FUNCTIONS//////////////////////////////////////////////////////////////////////////
+    void GetFrameIndicesWithBlend(uint32_t& outFrameIndex0, uint32_t& outFrameIndex1, float& outBlend, float inTime);
+    Matrix4x4* GetJointKeyframes(uint32_t jointIndex);
+    void ApplyMotionToSkeleton(Skeleton* skeleton, float time);
+    void ApplyMotionToSkeleton(Skeleton* skeleton, float time, BoneMask& boneMask);
+    
     //FILE IO//////////////////////////////////////////////////////////////////////////
     void WriteToFile(const char* filename);
     void WriteToStream(IBinaryWriter& writer);
@@ -36,13 +48,13 @@ public:
     void ReadFromFile(const char* filename);
 
     //MEMBER VARIABLES//////////////////////////////////////////////////////////////////////////
-	uint32_t m_frameCount;
-	float m_totalLengthSeconds;
-	float m_frameRate;
-	float m_frameTime;
-	std::string m_motionName;
-	int m_jointCount;
-	//2D array of matrices, stride of sizeof(matrix4x4) * joint count
+    uint32_t m_frameCount;
+    float m_totalLengthSeconds;
+    float m_frameRate;
+    float m_frameTime;
+    std::string m_motionName;
+    int m_jointCount;
+    //2D array of matrices, stride of sizeof(matrix4x4) * joint count
     Matrix4x4* m_keyframes;// [jointCount][frameCount];
     PLAYBACK_MODE m_playbackMode;
     float m_lastTime;
