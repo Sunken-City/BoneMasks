@@ -246,7 +246,6 @@ void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time, Bone
 
         Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
         Matrix4x4 initialPosition = skeleton->m_boneToModelSpace[jointIndex];
-        //Matrix4x4::MatrixInvert(&initialPosition);
         Matrix4x4 finalModel = Matrix4x4::MatrixLerp(initialPosition, newModel, mask.boneMasks[jointIndex]);
 
         //Needs to set bone to model matrix
