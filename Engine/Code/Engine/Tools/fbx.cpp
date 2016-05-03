@@ -9,82 +9,14 @@
 
 Mesh* g_loadedMesh = nullptr;
 MeshBuilder* g_loadedMeshBuilder = nullptr;
-Skeleton* g_loadedSkeleton = nullptr;
-AnimationMotion* g_loadedMotion = nullptr;
+extern Skeleton* g_loadedSkeleton;
+extern AnimationMotion* g_loadedMotion;
 
 #if defined(TOOLS_BUILD)
     //For tools only
     #include "ThirdParty/FBX/include/fbxsdk.h"
 #include "../Math/Vector4Int.hpp"
     #pragma comment(lib, "libfbxsdk-md.lib")
-
-    //-----------------------------------------------------------------------------------
-    CONSOLE_COMMAND(saveSkel)
-    {
-        if (!args.HasArgs(1))
-        {
-            Console::instance->PrintLine("saveSkel <filename>", RGBA::RED);
-            return;
-        }
-        std::string filename = args.GetStringArgument(0);
-        if (!g_loadedSkeleton)
-        {
-            Console::instance->PrintLine("Error: No skeleton has been loaded yet, use fbxLoad to bring in a mesh with a skeleton first.", RGBA::RED);
-            return;
-        }
-        g_loadedSkeleton->WriteToFile(filename.c_str());
-    }
-
-    //-----------------------------------------------------------------------------------
-    CONSOLE_COMMAND(loadSkel)
-    {
-        if (!args.HasArgs(1))
-        {
-            Console::instance->PrintLine("loadSkel <filename>", RGBA::RED);
-            return;
-        }
-        std::string filename = args.GetStringArgument(0);
-        if (g_loadedSkeleton)
-        {
-            delete g_loadedSkeleton;
-        }
-        g_loadedSkeleton = new Skeleton();
-        g_loadedSkeleton->ReadFromFile(filename.c_str());
-    }
-
-    //-----------------------------------------------------------------------------------
-    CONSOLE_COMMAND(saveMotion)
-    {
-        if (!args.HasArgs(1))
-        {
-            Console::instance->PrintLine("saveMotion <filename>", RGBA::RED);
-            return;
-        }
-        std::string filename = args.GetStringArgument(0);
-        if (!g_loadedSkeleton)
-        {
-            Console::instance->PrintLine("Error: No skeleton has been loaded yet, use fbxLoad to bring in a mesh with a skeleton first.", RGBA::RED);
-            return;
-        }
-        g_loadedMotion->WriteToFile(filename.c_str());
-    }
-
-    //-----------------------------------------------------------------------------------
-    CONSOLE_COMMAND(loadMotion)
-    {
-        if (!args.HasArgs(1))
-        {
-            Console::instance->PrintLine("loadMotion <filename>", RGBA::RED);
-            return;
-        }
-        std::string filename = args.GetStringArgument(0);
-        if (g_loadedMotion)
-        {
-            delete g_loadedMotion;
-        }
-        g_loadedMotion = new AnimationMotion();
-        g_loadedMotion->ReadFromFile(filename.c_str());
-    }
 
     //-----------------------------------------------------------------------------------
     CONSOLE_COMMAND(fbxList)

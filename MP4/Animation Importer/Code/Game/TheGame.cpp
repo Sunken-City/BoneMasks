@@ -24,6 +24,7 @@
 #include "Engine/Core/ErrorWarningAssert.hpp"
 #include "Engine/Core/StringUtils.hpp"
 #include "Engine/Tools/fbx.hpp"
+#include <vector>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -34,6 +35,7 @@ TheGame* TheGame::instance = nullptr;
 extern MeshBuilder* g_loadedMeshBuilder;
 extern Skeleton* g_loadedSkeleton;
 extern AnimationMotion* g_loadedMotion;
+extern std::vector<AnimationMotion*>* g_loadedMotions;
 
 CONSOLE_COMMAND(twah)
 {
@@ -285,15 +287,22 @@ void TheGame::Render() const
     RenderAxisLines();
     if (g_loadedSkeleton && m_showSkeleton)
     {
-        if (g_loadedMotion)
+        if (g_loadedMotions)
         {
-            BoneMask mask = BoneMask(g_loadedSkeleton->GetJointCount());
-            mask.SetAllBonesTo(1.0f);
+            BoneMask upperHalfMask = BoneMask(g_loadedSkeleton->GetJointCount());
+            upperHalfMask.SetAllBonesTo(1.0f);
             for (int i = 0; i < 9; ++i)
             {
-                mask.boneMasks[i] = 0.7f;
+                upperHalfMask.boneMasks[i] = 0.0f;
             }
-            g_loadedMotion->ApplyMotionToSkeleton(g_loadedSkeleton, (float)GetCurrentTimeSeconds(), mask);
+            BoneMask lowerHalfMask = BoneMask(g_loadedSkeleton->GetJointCount());
+            lowerHalfMask.SetAllBonesTo(0.0f);
+            for (int i = 0; i < 9; ++i)
+            {
+                lowerHalfMask.boneMasks[i] = 1.0f;
+            }
+            g_loadedMotions->at(0)->ApplyMotionToSkeleton(g_loadedSkeleton, (float)GetCurrentTimeSeconds(), upperHalfMask);
+            g_loadedMotions->at(1)->ApplyMotionToSkeleton(g_loadedSkeleton, (float)GetCurrentTimeSeconds(), lowerHalfMask);
             if (g_loadedSkeleton->m_joints)
             {
                 delete g_loadedSkeleton->m_joints->m_mesh;

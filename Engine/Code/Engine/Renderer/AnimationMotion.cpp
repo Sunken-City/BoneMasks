@@ -4,6 +4,72 @@
 #include "Engine/Core/ErrorWarningAssert.hpp"
 #include "Engine/Input/BinaryReader.hpp"
 #include "Engine/Input/BinaryWriter.hpp"
+#include "Engine/Input/Console.hpp"
+#include <vector>
+
+extern Skeleton* g_loadedSkeleton;
+AnimationMotion* g_loadedMotion = nullptr;
+std::vector<AnimationMotion*>* g_loadedMotions = nullptr;
+
+//-----------------------------------------------------------------------------------
+CONSOLE_COMMAND(saveMotion)
+{
+    if (!args.HasArgs(1))
+    {
+        Console::instance->PrintLine("saveMotion <filename>", RGBA::RED);
+        return;
+    }
+    std::string filename = args.GetStringArgument(0);
+    if (!g_loadedSkeleton)
+    {
+        Console::instance->PrintLine("Error: No skeleton has been loaded yet, use fbxLoad to bring in a mesh with a skeleton first.", RGBA::RED);
+        return;
+    }
+    g_loadedMotion->WriteToFile(filename.c_str());
+}
+
+//-----------------------------------------------------------------------------------
+CONSOLE_COMMAND(loadMotion)
+{
+    if (!args.HasArgs(1))
+    {
+        Console::instance->PrintLine("loadMotion <filename>", RGBA::RED);
+        return;
+    }
+    std::string filename = args.GetStringArgument(0);
+    if (g_loadedMotion)
+    {
+        delete g_loadedMotion;
+    }
+    g_loadedMotion = new AnimationMotion();
+    g_loadedMotion->ReadFromFile(filename.c_str());
+}
+
+//-----------------------------------------------------------------------------------
+CONSOLE_COMMAND(combineMotions)
+{
+    if (!args.HasArgs(2))
+    {
+        Console::instance->PrintLine("combineMotions <filename1> <filename2>", RGBA::RED);
+        return;
+    }
+    std::string filename0 = args.GetStringArgument(0);
+    std::string filename1 = args.GetStringArgument(1);
+    if (g_loadedMotion)
+    {
+        delete g_loadedMotion;
+    }
+    if (g_loadedMotions)
+    {
+        g_loadedMotions->clear();
+        delete g_loadedMotions;
+    }
+    g_loadedMotions = new std::vector<AnimationMotion*>();
+    g_loadedMotions->push_back(new AnimationMotion());
+    g_loadedMotions->push_back(new AnimationMotion());
+    g_loadedMotions->at(0)->ReadFromFile(filename0.c_str());
+    g_loadedMotions->at(1)->ReadFromFile(filename1.c_str());
+}
 
 //-----------------------------------------------------------------------------------
 AnimationMotion::AnimationMotion(const std::string& motionName, float timeSpan, float framerate, Skeleton* skeleton)
@@ -174,17 +240,13 @@ void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time, Bone
     uint32_t jointCount = skeleton->GetJointCount();
     for (uint32_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
     {
-//         if (mask.boneMasks[jointIndex] == 0.0f)
-//         {
-//             continue;
-//         }
         Matrix4x4* jointKeyframes = GetJointKeyframes(jointIndex);
         Matrix4x4& matrix0 = jointKeyframes[frame0];
         Matrix4x4& matrix1 = jointKeyframes[frame1];
 
         Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
-        Matrix4x4 initialPosition = skeleton->m_modelToBoneSpace[jointIndex];
-        Matrix4x4::MatrixInvert(&initialPosition);
+        Matrix4x4 initialPosition = skeleton->m_boneToModelSpace[jointIndex];
+        //Matrix4x4::MatrixInvert(&initialPosition);
         Matrix4x4 finalModel = Matrix4x4::MatrixLerp(initialPosition, newModel, mask.boneMasks[jointIndex]);
 
         //Needs to set bone to model matrix
@@ -300,6 +362,6 @@ void BoneMask::SetAllBonesTo(float boneWeight)
 {
     for (float& maskWeight : boneMasks)
     {
-        maskWeight = 1.0f;
+        maskWeight = boneWeight;
     }
 }
