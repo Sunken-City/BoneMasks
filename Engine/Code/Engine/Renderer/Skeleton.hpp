@@ -9,11 +9,20 @@ class MeshRenderer;
 
 struct Joint
 {
-	Joint(const std::string& name, int parentIndex, const Matrix4x4& modelToBoneSpace, const Matrix4x4& boneToModelSpace);
+	Joint(const std::string& name = "", int parentIndex = -1, const Matrix4x4& modelToBoneSpace = Matrix4x4::IDENTITY, const Matrix4x4& boneToModelSpace = Matrix4x4::IDENTITY);
+    Joint(const Joint& other);
+
 	std::string m_name;
 	int m_parentIndex;
+    std::vector<int> m_children;
 	Matrix4x4 m_modelToBoneSpace;
 	Matrix4x4 m_boneToModelSpace;
+    Matrix4x4 m_localModelToBoneSpace;
+    Matrix4x4 m_localBoneToModelSpace;
+
+    const int GetParentIndex() const;
+    const std::string GetName() const;
+    const std::vector<int> GetChildren() const;
 };
 
 class Skeleton
@@ -24,14 +33,18 @@ public:
 	~Skeleton();
 
 	//FUNCTIONS//////////////////////////////////////////////////////////////////////////
-	inline int GetLastAddedJointIndex() const { return m_names.size() - 1; };
+	inline int GetLastAddedJointIndex() const { return m_jointArray.size() - 1; };
 	void AddJoint(const char* str, int parentJointIndex, Matrix4x4 initialBoneToModelMatrix);
 	int FindJointIndex(const std::string& name);
-	void Render() const;
+    void Render() const;
+    void SetWorldBoneToModel(const Matrix4x4& mat, const int& index);
+    void SetLocalBoneToModel(const Matrix4x4& mat, const int& index);
 
 	//GETTERS//////////////////////////////////////////////////////////////////////////
 	uint32_t GetJointCount();
 	Joint GetJoint(int index);
+    const Matrix4x4 GetWorldBoneToModelOutOfLocal(const int& currentIndex) const;
+    const Matrix4x4 GetWorldModelToBoneOutOfLocal(const int& currentIndex) const;
 
 	//FILE IO//////////////////////////////////////////////////////////////////////////
 	void WriteToFile(const char* filename);
@@ -40,10 +53,11 @@ public:
 	void ReadFromFile(const char* filename);
 
 	//MEMBER VARIABLES//////////////////////////////////////////////////////////////////////////
-	std::vector<std::string> m_names;
-	std::vector<int> m_parentIndices;
-	std::vector<Matrix4x4> m_modelToBoneSpace;
-	std::vector<Matrix4x4> m_boneToModelSpace;
+    std::vector<Joint> m_jointArray;
+	//std::vector<std::string> m_names;
+	//std::vector<int> m_parentIndices;
+	//std::vector<Matrix4x4> m_modelToBoneSpace;
+	//std::vector<Matrix4x4> m_boneToModelSpace;
 	mutable MeshRenderer* m_joints;
 	mutable MeshRenderer* m_bones;
 

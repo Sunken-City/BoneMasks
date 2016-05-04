@@ -57,20 +57,58 @@ Skeleton::~Skeleton()
 //-----------------------------------------------------------------------------------
 void Skeleton::AddJoint(const char* str, int parentJointIndex, Matrix4x4 initialBoneToModelMatrix)
 {
-    m_names.push_back(std::string(str));
-    m_parentIndices.push_back(parentJointIndex);
-    m_boneToModelSpace.push_back(initialBoneToModelMatrix);
+    //m_names.push_back(std::string(str));
+    //m_parentIndices.push_back(parentJointIndex);
+    //m_boneToModelSpace.push_back(initialBoneToModelMatrix);
     Matrix4x4 modelToBoneMatrix = initialBoneToModelMatrix;
     Matrix4x4::MatrixInvert(&modelToBoneMatrix);
-    m_modelToBoneSpace.push_back(modelToBoneMatrix);
+    //m_modelToBoneSpace.push_back(modelToBoneMatrix);
+    Joint joint = Joint(std::string(str), parentJointIndex, modelToBoneMatrix, initialBoneToModelMatrix);
+
+    if (parentJointIndex == -1)
+    {
+        joint.m_localBoneToModelSpace = initialBoneToModelMatrix;
+        joint.m_localModelToBoneSpace = modelToBoneMatrix;
+    }
+    else
+    {
+        m_jointArray[parentJointIndex].m_children.push_back(m_jointArray.size());
+        //WorldInitial = LocalInitial * WorldParent
+        //WorldInitial * WorldParent^-1 = localInitial
+        //LocalInverse = inverse(LocalInitial) = WorldParent * WorldInitialInverse (?)
+        //WorldInitial = LocalInitial * LocalParent * LocalParentParent ... Ri
+
+
+        Matrix4x4 parentBoneToModel = m_jointArray[parentJointIndex].m_boneToModelSpace;
+        Matrix4x4 parentModelToBone = m_jointArray[parentJointIndex].m_modelToBoneSpace;
+
+
+        Matrix4x4 localBoneToModel = Matrix4x4::IDENTITY;
+        Matrix4x4 localModelToBone = Matrix4x4::IDENTITY;
+        //Matrix4x4 localModelToBone = localBoneToModel;
+        //Matrix4x4::MatrixInvert(&localModelToBone);
+
+        //Calc Local bone to model and model to bones
+        Matrix4x4::MatrixMultiply(&localBoneToModel, &initialBoneToModelMatrix, &parentModelToBone);
+        //localModelToBone = localBoneToModel;//modelToBoneMatrix * parentBoneToModel;
+        //Matrix4x4::MatrixInvert(&localModelToBone);
+        Matrix4x4::MatrixMultiply(&localModelToBone, &modelToBoneMatrix, &parentBoneToModel);
+
+        joint.m_localBoneToModelSpace = localBoneToModel;
+        joint.m_localModelToBoneSpace = localModelToBone;
+
+    }
+
+    m_jointArray.push_back(joint);
+ 
 }
 
 //-----------------------------------------------------------------------------------
 int Skeleton::FindJointIndex(const std::string& name)
 {
-    for (unsigned int i = 0; i < m_names.size(); ++i)
+    for (unsigned int i = 0; i < m_jointArray.size(); ++i)
     {
-        if (m_names[i] == name)
+        if (strcmp((m_jointArray[i].m_name).c_str(),name.c_str()) == 0)
         {
             return i;
         }
@@ -81,7 +119,38 @@ int Skeleton::FindJointIndex(const std::string& name)
 //-----------------------------------------------------------------------------------
 Joint Skeleton::GetJoint(int index)
 {
-    return Joint(m_names[index], m_parentIndices[index], m_modelToBoneSpace[index], m_boneToModelSpace[index]);
+    //No case for if index less than 0 or greater than num of joints?
+    return m_jointArray.at(index);
+}
+const Matrix4x4 Skeleton::GetWorldBoneToModelOutOfLocal(const int& currentIndex) const
+{
+    if (currentIndex < 0 || currentIndex >= (int)m_jointArray.size())
+    {
+        return Matrix4x4::IDENTITY;
+    }
+    Matrix4x4 current = m_jointArray[currentIndex].m_localBoneToModelSpace;
+    if (m_jointArray[currentIndex].m_parentIndex != -1)
+    {
+        Matrix4x4 parent = GetWorldBoneToModelOutOfLocal(m_jointArray[currentIndex].m_parentIndex);
+        Matrix4x4::MatrixMultiply(&current, &current, &parent);
+    }
+
+    return current;
+}
+const Matrix4x4 Skeleton::GetWorldModelToBoneOutOfLocal(const int& currentIndex) const
+{
+    if (currentIndex < 0 || currentIndex >= (int)m_jointArray.size())
+    {
+        return Matrix4x4::IDENTITY;
+    }
+    Matrix4x4 current = m_jointArray[currentIndex].m_localModelToBoneSpace;
+    if (m_jointArray[currentIndex].m_parentIndex != -1)
+    {
+        Matrix4x4 parent = GetWorldModelToBoneOutOfLocal(m_jointArray[currentIndex].m_parentIndex);
+        Matrix4x4::MatrixMultiply(&current, &current, &parent);
+    }
+
+    return current;
 }
 
 //-----------------------------------------------------------------------------------
@@ -90,8 +159,9 @@ void Skeleton::Render() const
     if (!m_joints)
     {
         MeshBuilder builder;
-        for (const Matrix4x4& modelSpaceMatrix : m_boneToModelSpace)
+        for (size_t i = 0; i < m_jointArray.size(); i++)// const Matrix4x4& modelSpaceMatrix : m_boneToModelSpace)
         {
+            const Matrix4x4 modelSpaceMatrix = GetWorldBoneToModelOutOfLocal(i);// m_jointArray.at(i).m_boneToModelSpace;
             builder.AddIcoSphere(1.0f, RGBA::BLUE, 0, modelSpaceMatrix.GetTranslation());
         }
         m_joints = new MeshRenderer(new Mesh(), new Material(new ShaderProgram("Data/Shaders/fixedVertexFormat.vert", "Data/Shaders/fixedVertexFormat.frag"), 
@@ -102,12 +172,14 @@ void Skeleton::Render() const
     if (!m_bones)
     {
         MeshBuilder builder;
-        for (unsigned int i = 0; i < m_parentIndices.size(); i++)
+        for (unsigned int i = 0; i < m_jointArray.size(); i++)
         {
-            int parentIndex = m_parentIndices[i];
+            int parentIndex = m_jointArray[i].m_parentIndex;
             if (parentIndex >= 0)
             {
-                builder.AddLine(m_boneToModelSpace[i].GetTranslation(), m_boneToModelSpace[parentIndex].GetTranslation(), RGBA::SEA_GREEN);
+                Matrix4x4 currentBoneToModel = GetWorldBoneToModelOutOfLocal(i); //m_jointArray[i].m_boneToModelSpace.GetTranslation()
+                Matrix4x4 parentBoneToModel = GetWorldBoneToModelOutOfLocal(parentIndex); //m_jointArray[parentIndex].m_boneToModelSpace.GetTranslation()
+                builder.AddLine(currentBoneToModel.GetTranslation(), parentBoneToModel.GetTranslation(), RGBA::SEA_GREEN);
             }
         }
         m_bones = new MeshRenderer(new Mesh(), new Material(new ShaderProgram("Data/Shaders/fixedVertexFormat.vert", "Data/Shaders/fixedVertexFormat.frag"),
@@ -119,10 +191,96 @@ void Skeleton::Render() const
     m_bones->Render();
 }
 
+void Skeleton::SetWorldBoneToModel(const Matrix4x4& mat, const int& index)
+{
+    //Verify not accessing invalid index
+    if (index < 0 || index >= (int)m_jointArray.size())
+    {
+        return;
+    }
+
+    //Set World Position, and Calc new Local Position.
+    //Calc local position for parent. basically, parent should be only one we have to check that it's parent is not -1.
+    Matrix4x4 copyAble = Matrix4x4::IDENTITY;
+    m_jointArray[index].m_boneToModelSpace = mat;
+    Matrix4x4 localBoneToModel = m_jointArray[index].m_boneToModelSpace;
+    Matrix4x4 parentMat = m_jointArray[index].m_modelToBoneSpace;
+    if (m_jointArray[index].m_parentIndex != -1)
+    {
+        parentMat = m_jointArray[m_jointArray[index].m_parentIndex].m_modelToBoneSpace;
+    }
+    Matrix4x4::MatrixMultiply(&copyAble, &mat, &parentMat);
+    m_jointArray[index].m_localBoneToModelSpace = copyAble;
+
+
+    //calc local position for children.
+    std::vector<int> indexesToUpdate = m_jointArray[index].m_children;
+    for (size_t i = 0; i < indexesToUpdate.size(); i++)
+    {
+        //Get Indices
+        int currentJoint = indexesToUpdate.at(i);
+        int parentJoint = m_jointArray[currentJoint].m_parentIndex;
+
+        //Calc new local position
+        Matrix4x4 cur = m_jointArray[currentJoint].m_boneToModelSpace;
+        Matrix4x4 par = m_jointArray[parentJoint].m_modelToBoneSpace;
+        Matrix4x4::MatrixMultiply(&copyAble, &cur, &par);
+        m_jointArray[currentJoint].m_localBoneToModelSpace = copyAble;
+        Matrix4x4 curWorldPos = GetWorldBoneToModelOutOfLocal(currentJoint);
+        m_jointArray[currentJoint].m_boneToModelSpace = curWorldPos;
+
+        //Add Children to iterate through.
+        std::vector<int> toAdd = m_jointArray[currentJoint].m_children;
+        indexesToUpdate.insert(indexesToUpdate.end(), toAdd.begin(), toAdd.end());
+
+        indexesToUpdate.erase(indexesToUpdate.begin());
+        i--;
+    }
+
+}
+
+//void Skeleton::SetLocalBoneToModel(const Matrix4x4& mat, const int& index)
+//{
+//    if (index < 0 || index >= (int)m_jointArray.size())
+//    {
+//        return;
+//    }
+//    //Set Local Position, and Calc new World Position.
+//    Matrix4x4 parentWorldPosition = GetWorldBoneToModelOutOfLocal([index].m_parentIndex); // already has handling for indice passed in is invalid; returns identity, if is invalid.
+//    Matrix4x4 worldPos = Matrix4x4::IDENTITY;
+//    m_jointArray[index].m_localBoneToModelSpace = mat;
+//    Matrix4x4::MatrixMultiply(worldPos, mat, parentWorldPosition);
+//    m_jointArray[index].m_boneToModelSpace = worldPos;
+//
+//    //calc local position for children.
+//    std::vector<int> indexesToUpdate = m_jointArray[index].m_children;
+//    for (size_t i = 0; i < indexesToUpdate.size(); i++)
+//    {
+//        //Get Indices
+//        int currentJoint = indexesToUpdate.at(i);
+//        int parentJoint = (m_jointArray[currentJoint]).m_parentIndex;
+//
+//        //Calc new local position
+//        Matrix4x4 cur = m_jointArray[currentJoint].m_boneToModelSpace;
+//        Matrix4x4 par = m_jointArray[parentJoint].m_modelToBoneSpace;
+//        Matrix4x4::MatrixMultiply(&copyAble, &cur, &par);
+//        m_jointArray[currentJoint].m_localBoneToModelSpace = copyAble;
+//        Matrix4x4 curWorldPos = GetWorldBoneToModelOutOfLocal(currentJoint);
+//        m_jointArray[currentJoint].m_boneToModelSpace = curWorldPos;
+//
+//        //Add Children to iterate through.
+//        std::vector<int> toAdd = m_jointArray[currentJoint].m_children;
+//        indexesToUpdate.insert(indexesToUpdate.end(), toAdd.begin(), toAdd.end());
+//
+//        indexesToUpdate.erase(indexesToUpdate.begin());
+//        i--;
+//    }
+//}
+
 //-----------------------------------------------------------------------------------
 uint32_t Skeleton::GetJointCount()
 {
-    return m_names.size();
+    return m_jointArray.size();
 }
 
 //-----------------------------------------------------------------------------------
@@ -131,8 +289,32 @@ Joint::Joint(const std::string& name, int parentIndex, const Matrix4x4& modelToB
     , m_parentIndex(parentIndex)
     , m_modelToBoneSpace(modelToBoneSpace)
     , m_boneToModelSpace(boneToModelSpace)
+    , m_localBoneToModelSpace(Matrix4x4::IDENTITY) //Due to the nature of skeleton not using pointers, have to calc these outside of Joint.
+    , m_localModelToBoneSpace(Matrix4x4::IDENTITY)
 {
 
+}
+Joint::Joint(const Joint& other)
+    : m_name(other.m_name),
+    m_parentIndex(other.m_parentIndex),
+    m_modelToBoneSpace(other.m_modelToBoneSpace),
+    m_boneToModelSpace(other.m_boneToModelSpace),
+    m_localModelToBoneSpace(other.m_localModelToBoneSpace),
+    m_localBoneToModelSpace(other.m_localBoneToModelSpace)
+{
+
+}
+const int Joint::GetParentIndex() const
+{
+    return m_parentIndex;
+}
+const std::string Joint::GetName() const
+{
+    return m_name;
+}
+const std::vector<int> Joint::GetChildren() const
+{
+    return m_children;
 }
 
 //-----------------------------------------------------------------------------------
@@ -156,22 +338,25 @@ void Skeleton::WriteToStream(IBinaryWriter& writer)
     //Initial Model Space
 
     writer.Write<uint32_t>(FILE_VERSION);
-    writer.Write<uint32_t>(m_names.size());
+    writer.Write<uint32_t>(m_jointArray.size());
     
-    for (const std::string& str : m_names)
+    for (size_t i = 0; i < m_jointArray.size(); i++)//const std::string& str : m_names)
     {
+        std::string str = m_jointArray.at(i).m_name;
         writer.WriteString(str.c_str());
     }
-    for (int index : m_parentIndices)
+    for (size_t i = 0; i < m_jointArray.size(); i++)//int index : m_parentIndices)
     {
+        int index = m_jointArray.at(i).m_parentIndex;
         writer.Write<int>(index);
     }
-    for (const Matrix4x4& mat : m_boneToModelSpace)
+    for (size_t i = 0; i < m_jointArray.size(); i++)//const Matrix4x4& mat : m_boneToModelSpace)
     {
+        Matrix4x4 mat = m_jointArray.at(i).m_boneToModelSpace;
         //writer.WriteBytes(mat.data, 16);
-        for (int i = 0; i < 16; ++i)
+        for (int j = 0; j < 16; ++j)
         {
-            writer.Write<float>(mat.data[i]);
+            writer.Write<float>(mat.data[j]);
         }
     }
 }
@@ -190,18 +375,19 @@ void Skeleton::ReadFromStream(IBinaryReader& reader)
     ASSERT_OR_DIE(fileVersion == FILE_VERSION, "File version didn't match!");
     uint32_t numberOfJoints = 0;
     ASSERT_OR_DIE(reader.Read<uint32_t>(numberOfJoints), "Failed to read number of joints");
+    m_jointArray.resize(numberOfJoints);
 
     for (unsigned int i = 0; i < numberOfJoints; ++i)
     {
         const char* jointName = nullptr;
         reader.ReadString(jointName, 64);
-        m_names.push_back(jointName);
+        m_jointArray.at(i).m_name = (jointName);
     }
     for (unsigned int i = 0; i < numberOfJoints; ++i)
     {
         int index = 0;
         reader.Read<int>(index);
-        m_parentIndices.push_back(index);
+        m_jointArray.at(i).m_parentIndex = (index);
     }
     for (unsigned int i = 0; i < numberOfJoints; ++i)
     {
@@ -210,7 +396,7 @@ void Skeleton::ReadFromStream(IBinaryReader& reader)
         {
             reader.Read<float>(matrix.data[j]);
         }
-        m_boneToModelSpace.push_back(matrix);
+        m_jointArray.at(i).m_boneToModelSpace = matrix;
         //m_boneToModelSpace.push_back(Matrix4x4((float*)reader.ReadBytes(16)));
         //Matrix4x4 invertedMatrix = m_boneToModelSpace[i];
         //Matrix4x4::MatrixInvert(&invertedMatrix);

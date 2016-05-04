@@ -982,6 +982,7 @@ void Renderer::BindFramebuffer(Framebuffer* fbo)
 //Is really only used for debug purposes
 void Renderer::FrameBufferCopyToBack(Framebuffer* fbo, int colorTargetNumber /*= NULL*/)
 {
+    colorTargetNumber;
     if (fbo == nullptr)
     {
         return;

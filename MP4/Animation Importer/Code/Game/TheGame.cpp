@@ -550,11 +550,11 @@ void TheGame::RenderCoolStuff() const
     if (g_loadedMotion && g_loadedSkeleton)
     {
         int NUM_BONES = 200;
-        for (int i = 0; i < g_loadedSkeleton->m_modelToBoneSpace.size(); ++i)
+        for (int i = 0; i < (int)g_loadedSkeleton->m_jointArray.size(); ++i)
         {
-            Matrix4x4 inverseWorld = g_loadedSkeleton->m_modelToBoneSpace[i];
+            Matrix4x4 inverseWorld = g_loadedSkeleton->m_jointArray.at(i).m_modelToBoneSpace;
             Matrix4x4 mat = Matrix4x4::IDENTITY;
-            Matrix4x4::MatrixMultiply(&mat, &inverseWorld, &g_loadedSkeleton->m_boneToModelSpace[i]);
+            Matrix4x4::MatrixMultiply(&mat, &inverseWorld, &g_loadedSkeleton->m_jointArray.at(i).m_boneToModelSpace);
             m_testMaterial->SetMatrix4x4Uniform(Stringf("gBoneMatrices[%i]", i).c_str(), mat, NUM_BONES);
         }
     }

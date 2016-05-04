@@ -81,5 +81,5 @@ Vector4Int Vector4Int::Manhattan(const Vector4Int& position, const Vector4Int& e
 
 float Vector4Int::Magnitude()
 {
-    return sqrt((x*x) + (y*y) + (z*z) + (w*w));
+    return (float)sqrt((x*x) + (y*y) + (z*z) + (w*w));
 }

@@ -366,7 +366,7 @@ extern AnimationMotion* g_loadedMotion;
 
         //Set Skin Weights
         int controlIndex = mesh->GetPolygonVertex(polyIndex, vertIndex);
-        if (controlIndex < skinWeights.size())
+        if (controlIndex < (int)skinWeights.size())
         {
             builder.SetBoneWeights(skinWeights[controlIndex].indices, skinWeights[controlIndex].weights);
             builder.RenormalizeSkinWeights(); //Just to be safe.
@@ -386,6 +386,8 @@ extern AnimationMotion* g_loadedMotion;
     //-----------------------------------------------------------------------------------
     static Matrix4x4 GetGeometricTransform(FbxMesh* mesh)
     {
+        //Why does this not get the geometric transform?
+        mesh;
         return Matrix4x4::IDENTITY;
     }
 
@@ -458,6 +460,7 @@ extern AnimationMotion* g_loadedMotion;
     //-----------------------------------------------------------------------------------
     static void GetSkinWeights(SceneImport* import, std::vector<SkinWeight>& skinWeights, const FbxMesh* mesh, std::map<int, FbxNode*>& nodeToJointIndex)
     {
+        import;
         int controlPointCount = mesh->GetControlPointsCount();
         skinWeights.resize(controlPointCount);
         for (size_t i = 0; i < skinWeights.size(); ++i) 
@@ -827,7 +830,7 @@ extern AnimationMotion* g_loadedMotion;
             scene->SetCurrentAnimationStack(anim);
 
             const char* motionName = anim->GetName();
-            float timeSpan = duration.GetSecondDouble();
+            float timeSpan = (float)duration.GetSecondDouble();
             AnimationMotion* motion = new AnimationMotion(motionName, timeSpan, framerate, skeleton);
 
             int jointCount = skeleton->GetJointCount();
@@ -865,7 +868,8 @@ extern AnimationMotion* g_loadedMotion;
         ImportSkeletons(import, root, matrixStack, nullptr, -1, nodeToJointIndex);
         ImportSceneNode(import, root, matrixStack, nodeToJointIndex);
         //Top contains just our change of basis and scale matrices at this point
-        ImportMotions(import, scene, matrixStack.GetTop(), nodeToJointIndex, 10);
+        Matrix4x4 top = matrixStack.GetTop();
+        ImportMotions(import, scene, top, nodeToJointIndex, 10.f);
     }
 
     //-----------------------------------------------------------------------------------
@@ -880,6 +884,8 @@ extern AnimationMotion* g_loadedMotion;
     //-----------------------------------------------------------------------------------
     SceneImport* FbxLoadSceneFromFile(const char* fbxFilename, const Matrix4x4& engineBasis, bool isEngineBasisRightHanded, const Matrix4x4& transform)
     {
+        //engineBasis not used?
+        engineBasis;
         FbxScene* scene = nullptr;
         FbxManager* fbxManager = FbxManager::Create();
         if (nullptr == fbxManager)

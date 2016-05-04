@@ -184,7 +184,7 @@ void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time)
         //Needs to set bone to model matrix
         //(Or set your matrix tree's world to this, and set
         //bone to model on Skelelton world's array
-        skeleton->m_boneToModelSpace[jointIndex] = newModel; //SetJointWorldTransform(jointIndex, newModel);
+        skeleton->m_jointArray.at(jointIndex).m_boneToModelSpace = newModel; //SetJointWorldTransform(jointIndex, newModel);
     }
 }
 
@@ -245,13 +245,14 @@ void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time, Bone
         Matrix4x4& matrix1 = jointKeyframes[frame1];
 
         Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
-        Matrix4x4 initialPosition = skeleton->m_boneToModelSpace[jointIndex];
+        Matrix4x4 initialPosition = skeleton->m_jointArray[jointIndex].m_boneToModelSpace;
         Matrix4x4 finalModel = Matrix4x4::MatrixLerp(initialPosition, newModel, mask.boneMasks[jointIndex]);
 
         //Needs to set bone to model matrix
         //(Or set your matrix tree's world to this, and set
         //bone to model on Skelelton world's array
-        skeleton->m_boneToModelSpace[jointIndex] = finalModel; //SetJointWorldTransform(jointIndex, newModel);
+        skeleton->SetWorldBoneToModel(finalModel, jointIndex);
+        //skeleton->m_jointArray[jointIndex].m_boneToModelSpace = finalModel; //SetJointWorldTransform(jointIndex, newModel);
     }
 }
 

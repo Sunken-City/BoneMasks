@@ -73,5 +73,5 @@ Vector2Int Vector2Int::Manhattan(const Vector2Int& position, const Vector2Int& e
 
 float Vector2Int::Magnitude()
 {
-    return sqrt((x*x) + (y*y));
+    return (float)sqrt((x*x) + (y*y));
 }
