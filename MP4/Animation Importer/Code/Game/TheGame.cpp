@@ -547,12 +547,12 @@ void TheGame::RenderCoolStuff() const
     Matrix4x4::MatrixMakeRotationAroundY(&rotation, (float)GetCurrentTimeSeconds() * spinFactor);
     Matrix4x4::MatrixMultiply(&model, &rotation, &translation);
 
-    if (g_loadedMotion && g_loadedSkeleton)
+    if (g_loadedMotions && g_loadedSkeleton)
     {
         int NUM_BONES = 200;
-        for (int i = 0; i < (int)g_loadedSkeleton->m_jointArray.size(); ++i)
+        for (unsigned int i = 0; i < g_loadedSkeleton->m_jointArray.size(); ++i)
         {
-            Matrix4x4 world = g_loadedSkeleton->GetWorldBoneToModelOutOfLocal(i);// g_loadedSkeleton->m_jointArray.at(i).m_boneToModelSpace;
+            Matrix4x4 world = g_loadedSkeleton->GetWorldBoneToModelOutOfLocal(i); //g_loadedSkeleton->m_jointArray.at(i).m_boneToModelSpace; 
             Matrix4x4 inverseWorld = g_loadedSkeleton->m_jointArray.at(i).m_modelToBoneSpace; //g_loadedSkeleton->GetWorldModelToBoneOutOfLocal(i);
             Matrix4x4 mat = Matrix4x4::IDENTITY;
             Matrix4x4::MatrixMultiply(&mat, &inverseWorld, &world);

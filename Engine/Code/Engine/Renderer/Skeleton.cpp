@@ -136,7 +136,6 @@ const BoneMask Skeleton::GetBoneMaskForJointName(const std::string& name, const 
         {
             mas.boneMasks[jointIdx] = flo;
 
-            //
             std::vector<int> children;
             children.insert(children.begin(), m_jointArray.at(jointIdx).m_children.begin(), m_jointArray.at(jointIdx).m_children.end());
             for (size_t i = 0; i < children.size(); i++)
@@ -149,8 +148,6 @@ const BoneMask Skeleton::GetBoneMaskForJointName(const std::string& name, const 
                 children.erase(children.begin());
                 i--;
             }
-
-
             return mas;
         }
     }
