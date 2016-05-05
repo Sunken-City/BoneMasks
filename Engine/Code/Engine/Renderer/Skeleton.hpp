@@ -17,7 +17,6 @@ struct Joint
     std::vector<int> m_children;
 	Matrix4x4 m_modelToBoneSpace;
 	Matrix4x4 m_boneToModelSpace;
-    Matrix4x4 m_localModelToBoneSpace;
     Matrix4x4 m_localBoneToModelSpace;
 
     const int GetParentIndex() const;
@@ -44,7 +43,6 @@ public:
 	uint32_t GetJointCount();
 	Joint GetJoint(int index);
     const Matrix4x4 GetWorldBoneToModelOutOfLocal(const int& currentIndex) const;
-    const Matrix4x4 GetWorldModelToBoneOutOfLocal(const int& currentIndex) const;
 
 	//FILE IO//////////////////////////////////////////////////////////////////////////
 	void WriteToFile(const char* filename);

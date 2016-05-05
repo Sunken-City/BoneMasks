@@ -58,11 +58,13 @@ CONSOLE_COMMAND(combineMotions)
     if (g_loadedMotion)
     {
         delete g_loadedMotion;
+        g_loadedMotion = nullptr;
     }
     if (g_loadedMotions)
     {
         g_loadedMotions->clear();
         delete g_loadedMotions;
+        g_loadedMotions = nullptr;
     }
     g_loadedMotions = new std::vector<AnimationMotion*>();
     g_loadedMotions->push_back(new AnimationMotion());

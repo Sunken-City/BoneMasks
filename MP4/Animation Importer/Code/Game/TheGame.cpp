@@ -206,19 +206,19 @@ void TheGame::Update(float deltaTime)
     {
         m_showSkeleton = !m_showSkeleton;
     }
-    if (InputSystem::instance->WasKeyJustPressed('I'))
+    if (InputSystem::instance->WasKeyJustPressed('I') && g_loadedMotion != nullptr)
     {
         g_loadedMotion->m_playbackMode = AnimationMotion::CLAMP;
     }
-    else if (InputSystem::instance->WasKeyJustPressed('L'))
+    else if (InputSystem::instance->WasKeyJustPressed('L') && g_loadedMotion != nullptr)
     {
         g_loadedMotion->m_playbackMode = AnimationMotion::LOOP;
     }
-    else if (InputSystem::instance->WasKeyJustPressed('P'))
+    else if (InputSystem::instance->WasKeyJustPressed('P') && g_loadedMotion != nullptr)
     {
         g_loadedMotion->m_playbackMode = AnimationMotion::PING_PONG;
     }
-    else if (InputSystem::instance->WasKeyJustPressed('O'))
+    else if (InputSystem::instance->WasKeyJustPressed('O') && g_loadedMotion != nullptr)
     {
         g_loadedMotion->m_playbackMode = AnimationMotion::PAUSED;
     }
@@ -552,9 +552,10 @@ void TheGame::RenderCoolStuff() const
         int NUM_BONES = 200;
         for (int i = 0; i < (int)g_loadedSkeleton->m_jointArray.size(); ++i)
         {
-            Matrix4x4 inverseWorld = g_loadedSkeleton->m_jointArray.at(i).m_modelToBoneSpace;
+            Matrix4x4 world = g_loadedSkeleton->GetWorldBoneToModelOutOfLocal(i);// g_loadedSkeleton->m_jointArray.at(i).m_boneToModelSpace;
+            Matrix4x4 inverseWorld = g_loadedSkeleton->m_jointArray.at(i).m_modelToBoneSpace; //g_loadedSkeleton->GetWorldModelToBoneOutOfLocal(i);
             Matrix4x4 mat = Matrix4x4::IDENTITY;
-            Matrix4x4::MatrixMultiply(&mat, &inverseWorld, &g_loadedSkeleton->m_jointArray.at(i).m_boneToModelSpace);
+            Matrix4x4::MatrixMultiply(&mat, &inverseWorld, &world);
             m_testMaterial->SetMatrix4x4Uniform(Stringf("gBoneMatrices[%i]", i).c_str(), mat, NUM_BONES);
         }
     }
