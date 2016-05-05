@@ -6,6 +6,7 @@
 #include "Engine/Input/BinaryWriter.hpp"
 
 class MeshRenderer;
+struct BoneMask;
 
 struct Joint
 {
@@ -43,7 +44,8 @@ public:
     uint32_t GetJointCount();
     Joint GetJoint(int index);
     const Matrix4x4 GetWorldBoneToModelOutOfLocal(const int& currentIndex) const;
-
+    const BoneMask GetBoneMaskForJointName(const std::string& name, const float& flo = 1.f) const;
+    const BoneMask GetBoneMaskForJointNames(const std::vector<std::string>& name, const float& flo = 1.f) const;
     //FILE IO//////////////////////////////////////////////////////////////////////////
     void WriteToFile(const char* filename);
     void WriteToStream(IBinaryWriter& writer);

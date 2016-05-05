@@ -5,6 +5,7 @@
 #include "Engine/Renderer/ShaderProgram.hpp"
 #include "Engine/Renderer/Material.hpp"
 #include "Engine/Renderer/Vertex.hpp"
+#include "Engine/Renderer/AnimationMotion.hpp"
 #include "Engine/Input/Console.hpp"
 
 Skeleton* g_loadedSkeleton = nullptr;
@@ -124,6 +125,61 @@ const Matrix4x4 Skeleton::GetWorldBoneToModelOutOfLocal(const int& currentIndex)
     }
 
     return current;
+}
+const BoneMask Skeleton::GetBoneMaskForJointName(const std::string& name, const float& flo) const
+{
+    BoneMask mas(m_jointArray.size());
+    mas.SetAllBonesTo(0.f);
+    for (size_t jointIdx = 0; jointIdx < m_jointArray.size(); jointIdx++)
+    {
+        if (strcmp(name.c_str(), m_jointArray.at(jointIdx).m_name.c_str()) == 0)
+        {
+            mas.boneMasks[jointIdx] = flo;
+
+            //
+            std::vector<int> children;
+            children.insert(children.begin(), m_jointArray.at(jointIdx).m_children.begin(), m_jointArray.at(jointIdx).m_children.end());
+            for (size_t i = 0; i < children.size(); i++)
+            {
+                mas.boneMasks[children.at(i)] = flo;
+
+                std::vector<int> insertMe = m_jointArray.at(children.at(i)).m_children;
+                children.insert(children.begin(), insertMe.begin(), insertMe.end());
+
+                children.erase(children.begin());
+                i--;
+            }
+
+
+            return mas;
+        }
+    }
+    return mas;
+}
+const BoneMask Skeleton::GetBoneMaskForJointNames(const std::vector<std::string>& name, const float& flo) const
+{
+    BoneMask mas(m_jointArray.size());
+    mas.SetAllBonesTo(0.f);
+    for (size_t jointIdx = 0; jointIdx < m_jointArray.size(); jointIdx++)
+    {
+        if (strcmp(name.at(jointIdx).c_str(), m_jointArray.at(jointIdx).m_name.c_str()) == 0)
+        {
+            mas.boneMasks[jointIdx] = flo;
+            std::vector<int> children;
+            children.insert(children.begin(), m_jointArray.at(jointIdx).m_children.begin(), m_jointArray.at(jointIdx).m_children.end());
+            for (size_t i = 0; i < children.size(); i++)
+            {
+                mas.boneMasks[children.at(i)] = flo;
+
+                std::vector<int> insertMe = m_jointArray.at(children.at(i)).m_children;
+                children.insert(children.begin(), insertMe.begin(), insertMe.end());
+
+                children.erase(children.begin());
+                i--;
+            }
+        }
+    }
+    return mas;
 }
 
 //-----------------------------------------------------------------------------------
@@ -310,7 +366,10 @@ Joint::Joint(const Joint& other)
     m_boneToModelSpace(other.m_boneToModelSpace),
     m_localBoneToModelSpace(other.m_localBoneToModelSpace)
 {
-
+    for (size_t i = 0; i < other.m_children.size(); i++)
+    {
+        m_children.push_back(other.m_children.at(i));
+    }
 }
 const int Joint::GetParentIndex() const
 {
