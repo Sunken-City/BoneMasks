@@ -226,7 +226,7 @@ void Skeleton::SetLocalBoneToModel(const Matrix4x4& mat, const int& index)
 
     m_jointArray[index].m_localBoneToModelSpace = mat;
     Matrix4x4 copyAble = GetWorldBoneToModelOutOfLocal(index);
-    m_jointArray[index].m_localBoneToModelSpace = copyAble;
+    m_jointArray[index].m_boneToModelSpace = copyAble;
 
     //calc local position for children.
     std::vector<int> indexesToUpdate;
