@@ -88,7 +88,7 @@ void Skeleton::AddJoint(const char* str, int parentJointIndex, Matrix4x4 initial
     }
 
     m_jointArray.push_back(joint);
-    SetWorldBoneToModel(initialBoneToModelMatrix, m_jointArray.size() - 1);
+    SetWorldBoneToModelAndCacheLocal(initialBoneToModelMatrix, m_jointArray.size() - 1);
  
 }
 
@@ -217,24 +217,13 @@ void Skeleton::Render() const
     m_bones->Render();
 }
 
-void Skeleton::SetWorldBoneToModel(const Matrix4x4& mat, const int& index)
+void Skeleton::SetWorldBoneToModelAndCacheLocal(const Matrix4x4& mat, const int& index)
 {
     //Verify not accessing invalid index
     if (index < 0 || index >= (int)m_jointArray.size())
     {
         return;
     }
-
-    /*
-        m_jointArray[parentJointIndex].m_children.push_back(m_jointArray.size());
-        //Get Parent inverse Matrix
-        Matrix4x4 parentModelToBone = m_jointArray[parentJointIndex].m_modelToBoneSpace;
-        Matrix4x4 localBoneToModel = Matrix4x4::IDENTITY;
-        Matrix4x4 localModelToBone = Matrix4x4::IDENTITY;
-        //Calc Local bone to model and model to bones
-        Matrix4x4::MatrixMultiply(&localBoneToModel, &initialBoneToModelMatrix, &parentModelToBone);
-        joint.m_localBoneToModelSpace = localBoneToModel;
-    */
 
     //Set World Position, and Calc new Local Position.
     //Calc local position for parent. basically, parent should be only one we have to check that it's parent is not -1.
@@ -270,7 +259,7 @@ void Skeleton::SetWorldBoneToModel(const Matrix4x4& mat, const int& index)
     }
 
 }
-void Skeleton::SetLocalBoneToModel(const Matrix4x4& mat, const int& index)
+void Skeleton::SetLocalBoneToModelAndWorldUpdate(const Matrix4x4& mat, const int& index)
 {
     if (index < 0 || index >= (int)m_jointArray.size())
     {

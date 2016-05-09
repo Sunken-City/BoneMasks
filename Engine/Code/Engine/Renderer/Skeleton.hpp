@@ -37,8 +37,8 @@ public:
     void AddJoint(const char* str, int parentJointIndex, Matrix4x4 initialBoneToModelMatrix);
     int FindJointIndex(const std::string& name);
     void Render() const;
-    void SetWorldBoneToModel(const Matrix4x4& mat, const int& index);
-    void SetLocalBoneToModel(const Matrix4x4& mat, const int& index);
+    void SetWorldBoneToModelAndCacheLocal(const Matrix4x4& mat, const int& index);
+    void SetLocalBoneToModelAndWorldUpdate(const Matrix4x4& mat, const int& index);
 
     //GETTERS//////////////////////////////////////////////////////////////////////////
     uint32_t GetJointCount();

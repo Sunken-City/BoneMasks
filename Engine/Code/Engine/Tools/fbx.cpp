@@ -780,6 +780,25 @@ extern AnimationMotion* g_loadedMotion;
     }
 
     //-----------------------------------------------------------------------------------
+   //static Matrix4x4 GetWorldPositionFromLocalPosition(std::map<int,int>& curParentIndiceMap, int currentIndice, int keyframeIdx, AnimationMotion* motion)
+   //{
+   //    if (currentIndice < 0 || currentIndice >= curParentIndiceMap.size() || motion == nullptr)
+   //    {
+   //        return Matrix4x4::IDENTITY;
+   //    }
+   //    Matrix4x4 current;
+   //    /*
+   //Matrix4x4 current = m_jointArray[currentIndex].m_localBoneToModelSpace;
+   //if (m_jointArray[currentIndex].m_parentIndex != -1)
+   //{
+   //    Matrix4x4 parent = GetWorldBoneToModelOutOfLocal(m_jointArray[currentIndex].m_parentIndex);
+   //    Matrix4x4::MatrixMultiply(&current, &current, &parent);
+   //}
+   //
+   //return current;
+   //    */
+   //}
+
     static void ImportMotions(SceneImport* import, FbxScene* scene, Matrix4x4& matrixStackTop, std::map<int, FbxNode*>& map, float framerate)
     {
         int animationCount = scene->GetSrcObjectCount<FbxAnimStack>();
@@ -810,6 +829,12 @@ extern AnimationMotion* g_loadedMotion;
         Skeleton* skeleton= import->skeletons.at(0);
         ASSERT_OR_DIE(skeletonCount == 1, "Had multiple skeletons, we only support 1!");
 
+        std::map<int, int> jointMap; //order is: Current Idx, Parent Idx
+        for (size_t i = 0; i < skeleton->m_jointArray.size(); i++)
+        {
+            jointMap.insert(std::pair<int, int>((int)i, skeleton->m_jointArray.at(i).m_parentIndex));
+        }
+
         //Time between frames
         FbxTime advance;
         advance.SetSecondDouble((double)(1.0f / framerate));
@@ -834,27 +859,69 @@ extern AnimationMotion* g_loadedMotion;
             AnimationMotion* motion = new AnimationMotion(motionName, timeSpan, framerate, skeleton);
 
             int jointCount = skeleton->GetJointCount();
-            for (int jointIndex = 0; jointIndex < jointCount; ++jointIndex)
+            FbxTime evalTime = FbxTime(0);
+            for (uint32_t frameIndex = 0; frameIndex < motion->m_frameCount; ++frameIndex)
             {
-                FbxNode* node = map[jointIndex];
-
-                //Extracting world position
-                //local, you would need to grab parent as well
-                Matrix4x4* boneKeyframes = motion->GetJointKeyframes(jointIndex);
-
-                FbxTime evalTime = FbxTime(0);
-                for (uint32_t frameIndex = 0; frameIndex < motion->m_frameCount; ++frameIndex)
+                //Set the Skeleton to world positions; which will calc local
+                for (int jointIndex = 0; jointIndex < jointCount; ++jointIndex)
                 {
+                    FbxNode* node = map[jointIndex];
+                    Matrix4x4 boneTransform = GetNodeWorldTransformAtTime(node, evalTime, matrixStackTop);
+                    skeleton->SetWorldBoneToModelAndCacheLocal(boneTransform, jointIndex);
+                }
+                //Stash the locals.
+                for (int jointIndex = 0; jointIndex < jointCount; ++jointIndex)
+                {
+                    Matrix4x4* boneKeyframes = motion->GetJointKeyframes(jointIndex);
                     Matrix4x4* boneKeyframe = boneKeyframes + frameIndex;
 
-                    Matrix4x4 boneTransform = GetNodeWorldTransformAtTime(node, evalTime, matrixStackTop);
-                    double seconds = evalTime.GetSecondDouble();
-                    seconds = seconds;
+                    Matrix4x4 boneTransform = skeleton->m_jointArray.at(jointIndex).m_localBoneToModelSpace;
                     *boneKeyframe = boneTransform;
-
-                    evalTime += advance;
                 }
+                //Update the clock.
+                double seconds = evalTime.GetSecondDouble();
+                seconds = seconds;
+                evalTime += advance;
             }
+
+            //
+            //for (int jointIndex = 0; jointIndex < jointCount; ++jointIndex)
+            //{
+            //    FbxNode* node = map[jointIndex];
+            //    //Extracting world position
+            //    //local, you would need to grab parent as well
+            //    Matrix4x4* boneKeyframes = motion->GetJointKeyframes(jointIndex);
+            //
+            //    FbxTime evalTime = FbxTime(0);
+            //    for (uint32_t frameIndex = 0; frameIndex < motion->m_frameCount; ++frameIndex)
+            //    {
+            //        Matrix4x4* boneKeyframe = boneKeyframes + frameIndex;
+            //
+            //        Matrix4x4 boneTransform = GetNodeWorldTransformAtTime(node, evalTime, matrixStackTop);
+            //        skeleton->SetWorldBoneToModel(boneTransform, jointIndex);
+            //
+            //
+            //
+            //        /*
+            //        //So as to see how to conver to local space.
+            //        Matrix4x4 copyAble = mat;
+            //        m_jointArray[index].m_boneToModelSpace = mat;
+            //        if (m_jointArray[index].m_parentIndex != -1)
+            //        {
+            //        Matrix4x4 parentMat = GetWorldBoneToModelOutOfLocal(m_jointArray[index].m_parentIndex);
+            //        Matrix4x4::MatrixInvert(&parentMat);
+            //        Matrix4x4::MatrixMultiply(&copyAble, &mat, &parentMat);
+            //        }
+            //        m_jointArray[index].m_localBoneToModelSpace = copyAble;
+            //        */
+            //
+            //        double seconds = evalTime.GetSecondDouble();
+            //        seconds = seconds;
+            //        *boneKeyframe = transform;
+            //
+            //        evalTime += advance;
+            //    }
+            //}
             import->motions.push_back(motion);
         }
     }

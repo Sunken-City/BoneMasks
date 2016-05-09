@@ -287,7 +287,27 @@ void TheGame::Render() const
     RenderAxisLines();
     if (g_loadedSkeleton && m_showSkeleton)
     {
-        if (g_loadedMotions)
+        if (g_loadedMotion)
+        {
+            BoneMask TotalMask = BoneMask(g_loadedSkeleton->GetJointCount());
+            TotalMask.SetAllBonesTo(1.0f);
+            g_loadedMotion->ApplyMotionToSkeleton(g_loadedSkeleton, (float)GetCurrentTimeSeconds(), TotalMask);
+            if (g_loadedSkeleton->m_joints)
+            {
+                delete g_loadedSkeleton->m_joints->m_mesh;
+                delete g_loadedSkeleton->m_joints->m_material;
+                delete g_loadedSkeleton->m_joints;
+                g_loadedSkeleton->m_joints = nullptr;
+            }
+            if (g_loadedSkeleton->m_bones)
+            {
+                delete g_loadedSkeleton->m_bones->m_mesh;
+                delete g_loadedSkeleton->m_bones->m_material;
+                delete g_loadedSkeleton->m_bones;
+                g_loadedSkeleton->m_bones = nullptr;
+            }
+        }
+        else if (g_loadedMotions)
         {
             BoneMask upperHalfMask = BoneMask(g_loadedSkeleton->GetJointCount());
             upperHalfMask.SetAllBonesTo(1.0f);
@@ -547,7 +567,7 @@ void TheGame::RenderCoolStuff() const
     Matrix4x4::MatrixMakeRotationAroundY(&rotation, (float)GetCurrentTimeSeconds() * spinFactor);
     Matrix4x4::MatrixMultiply(&model, &rotation, &translation);
 
-    if (g_loadedMotions && g_loadedSkeleton)
+    if ((g_loadedMotion || g_loadedMotions) && g_loadedSkeleton)
     {
         int NUM_BONES = 200;
         for (unsigned int i = 0; i < g_loadedSkeleton->m_jointArray.size(); ++i)
