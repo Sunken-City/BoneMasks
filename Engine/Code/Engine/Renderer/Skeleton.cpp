@@ -277,7 +277,9 @@ void Skeleton::SetLocalBoneToModel(const Matrix4x4& mat, const int& index)
         return;
     }
 
+    //Set new Local Bone to Model
     m_jointArray[index].m_localBoneToModelSpace = mat;
+    //Update World Position.
     Matrix4x4 copyAble = GetWorldBoneToModelOutOfLocal(index);
     m_jointArray[index].m_boneToModelSpace = copyAble;
 

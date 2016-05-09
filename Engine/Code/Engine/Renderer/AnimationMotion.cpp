@@ -124,71 +124,71 @@ Matrix4x4* AnimationMotion::GetJointKeyframes(uint32_t jointIndex)
 {
     return m_keyframes + (m_frameCount * jointIndex);
 }
-
-//-----------------------------------------------------------------------------------
-void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time)
-{
-    uint32_t frame0 = 0;
-    uint32_t frame1 = 0;
-    float blend;
-
-    if (m_playbackMode == PLAYBACK_MODE::PAUSED)
-    {
-        time = m_lastTime;
-    }
-    else
-    {
-        m_lastTime = fmodf(time, m_totalLengthSeconds);
-    }
-
-    if (m_playbackMode == PLAYBACK_MODE::CLAMP)
-    {
-        time = fmodf(time, m_totalLengthSeconds);
-        if (time > m_totalLengthSeconds)
-        {
-            time = m_totalLengthSeconds;
-        }
-    }
-    else if (m_playbackMode == PLAYBACK_MODE::LOOP)
-    {
-        if (time > m_totalLengthSeconds)
-        {
-            time = fmodf(time, m_totalLengthSeconds);
-        }
-    }
-    else if (m_playbackMode == PLAYBACK_MODE::PING_PONG)
-    {
-        if (time > m_totalLengthSeconds)
-        {
-            float animTime = fmodf(time, m_totalLengthSeconds * 2.0f) - m_totalLengthSeconds;
-            if (animTime > 0.0f)
-            {
-                time = fmodf(time, m_totalLengthSeconds);
-            }
-            else if (animTime < 0.0f)
-            {
-                time = m_totalLengthSeconds - fmodf(time, m_totalLengthSeconds);
-            }
-        }
-    } 
-
-    GetFrameIndicesWithBlend(frame0, frame1, blend, time);
-
-    uint32_t jointCount = skeleton->GetJointCount();
-    for (uint32_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
-    {
-        Matrix4x4* jointKeyframes = GetJointKeyframes(jointIndex);
-        Matrix4x4& matrix0 = jointKeyframes[frame0];
-        Matrix4x4& matrix1 = jointKeyframes[frame1];
-
-        Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
-
-        //Needs to set bone to model matrix
-        //(Or set your matrix tree's world to this, and set
-        //bone to model on Skelelton world's array
-        skeleton->m_jointArray.at(jointIndex).m_boneToModelSpace = newModel; //SetJointWorldTransform(jointIndex, newModel);
-    }
-}
+// 
+// //-----------------------------------------------------------------------------------
+// void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time)
+// {
+//     uint32_t frame0 = 0;
+//     uint32_t frame1 = 0;
+//     float blend;
+// 
+//     if (m_playbackMode == PLAYBACK_MODE::PAUSED)
+//     {
+//         time = m_lastTime;
+//     }
+//     else
+//     {
+//         m_lastTime = fmodf(time, m_totalLengthSeconds);
+//     }
+// 
+//     if (m_playbackMode == PLAYBACK_MODE::CLAMP)
+//     {
+//         time = fmodf(time, m_totalLengthSeconds);
+//         if (time > m_totalLengthSeconds)
+//         {
+//             time = m_totalLengthSeconds;
+//         }
+//     }
+//     else if (m_playbackMode == PLAYBACK_MODE::LOOP)
+//     {
+//         if (time > m_totalLengthSeconds)
+//         {
+//             time = fmodf(time, m_totalLengthSeconds);
+//         }
+//     }
+//     else if (m_playbackMode == PLAYBACK_MODE::PING_PONG)
+//     {
+//         if (time > m_totalLengthSeconds)
+//         {
+//             float animTime = fmodf(time, m_totalLengthSeconds * 2.0f) - m_totalLengthSeconds;
+//             if (animTime > 0.0f)
+//             {
+//                 time = fmodf(time, m_totalLengthSeconds);
+//             }
+//             else if (animTime < 0.0f)
+//             {
+//                 time = m_totalLengthSeconds - fmodf(time, m_totalLengthSeconds);
+//             }
+//         }
+//     } 
+// 
+//     GetFrameIndicesWithBlend(frame0, frame1, blend, time);
+// 
+//     uint32_t jointCount = skeleton->GetJointCount();
+//     for (uint32_t jointIndex = 0; jointIndex < jointCount; ++jointIndex)
+//     {
+//         Matrix4x4* jointKeyframes = GetJointKeyframes(jointIndex);
+//         Matrix4x4& matrix0 = jointKeyframes[frame0];
+//         Matrix4x4& matrix1 = jointKeyframes[frame1];
+// 
+//         Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
+// 
+//         //Needs to set bone to model matrix
+//         //(Or set your matrix tree's world to this, and set
+//         //bone to model on Skelelton world's array
+//         skeleton->m_jointArray.at(jointIndex).m_boneToModelSpace = newModel; //SetJointWorldTransform(jointIndex, newModel);
+//     }
+// }
 
 //-----------------------------------------------------------------------------------
 void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time, BoneMask& mask)
@@ -249,11 +249,29 @@ void AnimationMotion::ApplyMotionToSkeleton(Skeleton* skeleton, float time, Bone
         Matrix4x4 newModel = Matrix4x4::MatrixLerp(matrix0, matrix1, blend);
         Matrix4x4 initialPosition = skeleton->m_jointArray[jointIndex].m_boneToModelSpace;
         Matrix4x4 finalModel = Matrix4x4::MatrixLerp(initialPosition, newModel, mask.boneMasks[jointIndex]);
+        Matrix4x4 parentModel = skeleton->GetWorldBoneToModelOutOfLocal(skeleton->m_jointArray[jointIndex].m_parentIndex);
+        Matrix4x4 invertParent = parentModel;
+        Matrix4x4::MatrixInvert(&invertParent);
+        Matrix4x4::MatrixMultiply(&finalModel, &finalModel, &invertParent);
+
+        /*
+        //So as to see how to conver to local space.
+        Matrix4x4 copyAble = mat;
+    m_jointArray[index].m_boneToModelSpace = mat;
+    if (m_jointArray[index].m_parentIndex != -1)
+    {
+        Matrix4x4 parentMat = GetWorldBoneToModelOutOfLocal(m_jointArray[index].m_parentIndex);
+        Matrix4x4::MatrixInvert(&parentMat);
+        Matrix4x4::MatrixMultiply(&copyAble, &mat, &parentMat);
+    }
+    m_jointArray[index].m_localBoneToModelSpace = copyAble;
+        */
 
         //Needs to set bone to model matrix
         //(Or set your matrix tree's world to this, and set
         //bone to model on Skelelton world's array
-        skeleton->SetWorldBoneToModel(finalModel, jointIndex);
+        //skeleton->SetWorldBoneToModel(finalModel, jointIndex);
+        skeleton->SetLocalBoneToModel(finalModel, jointIndex);
         //skeleton->m_jointArray[jointIndex].m_boneToModelSpace = finalModel; //SetJointWorldTransform(jointIndex, newModel);
     }
 }
